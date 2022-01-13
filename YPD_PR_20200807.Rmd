@@ -140,6 +140,7 @@ ggplot(data=normalisedOD %>%
        geom_line(aes(group = Well), size = 0.2, alpha = 0.2) + 
        stat_summary(fun = "median", geom = "line", size = 1) +
        scale_y_continuous(limits=c(0,0.9),expand=c(0,0)) +
+       geom_hline(aes(yintercept=0.1), linetype="dotted", colour="black") +
        labs(x = "Number of Days",
             y = "Absorbance (595nm)",
             title = "Rich Culture Media") +
@@ -152,7 +153,7 @@ ggplot(data=normalisedOD %>%
 ```
 
 ```{r}
-ggsave("~/GitHub/PR_Data_Gat201/YPD_PR_Gat201.png",width = 7,height=5)
+ggsave("~/GitHub/PR_Data_Gat201/YPD_PR_Gat201_0.1.png",width = 7,height=5)
 ```
 
 
