@@ -19,13 +19,14 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```
 
-#Plate reader assay#2.
+# Plate reader assay#2.
 
 ##Test WT H99 and GAt 201 deletion mutants 003(Madhani) and 004(Bahn)in RPMI only.
 ##7 Bioreps, 3 Techreps each. (NB only 2 Techreps for Biorep 7)
 ##Grow 5ml culture from colony (1 colony = 1 Biorep)in YPD, 30C, 250 rpm ON.
 ##Seed at )D 600nm = 0.2 , 200 ul per well.
 ##Run for 3 days.
+
 ```{r load_packages}
 library("reshape2")
 library(dplyr)
@@ -137,20 +138,21 @@ ggplot(data=normalisedOD %>%
 ```{r plot_all_stat_summary}
 ggplot(data=normalisedOD %>%
                       filter(Strain != ""), 
-                      aes(x=Time, y=OD_corrected, color=Strain, group = Well)) + 
-       geom_line() + 
-       stat_summary(fun = "median", geom = "line")+
-       scale_y_continuous(limits=c(0,0.1),expand=c(0,0))+
-       
-  
+                      aes(x=Time, y=OD_corrected, color=Strain)) + 
+       geom_line(aes(group = Well), size = 0.2, alpha = 0.2) + 
+       stat_summary(fun = "median", geom = "line", size = 1) +
+       scale_y_continuous(limits=c(0,0.1),expand=c(0,0)) +
        labs(x = "Time(Hrs)",
             y = "Absorbance (595nm)") +
-       theme(text = element_text(size = 20))+
-       theme_bw()+
+       theme(text = element_text(size = 20)) +
+       theme_bw() +
        scale_color_brewer(palette="Set1")
 ```
 
-
+Notes from EW:
+- set `size = 1` for `stat_summary` to emphasize the median value
+- set `size = 0.2, alpha = 0.2` for `geom_line` to make the individual values barely visible, just enough to see the variability.
+- `aes(group = Well)` only applies to `geom_line` so that we plot individual wells separately
 
 # Calculate the median of the OD_corrected at each Time and for each Strain
 
@@ -176,7 +178,7 @@ normalisedODSummary <- normalisedOD %>%
 ```{r plot_normalisedODSummary}
   ggplot(data=normalisedODSummary %>%
         filter(Strain.y != ""), 
-        aes(x=Time, y=median_OD_corrected, color=Strain.y, group = Well)) + 
+        aes(x=Time, y=median_OD_corrected, color=Strain.y)) + 
         geom_line() + 
         scale_y_continuous(limits=c(0,0.1),expand=c(0,0))+
         geom_vline(aes(xintercept=15), linetype="dotted", colour="black") +
