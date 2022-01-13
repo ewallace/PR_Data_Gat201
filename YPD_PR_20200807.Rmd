@@ -149,6 +149,7 @@ ggplot(data=normalisedOD %>%
        theme(axis.title = element_text(size = 25))+
        theme(axis.ticks.length = unit(0.3, "cm"))+
        theme(title = element_text(size = 30))+
+   theme(panel.grid.minor = element_blank())+
        theme(legend.title = element_text(size = 25))+
        scale_color_brewer(palette="Set1")
 ```
