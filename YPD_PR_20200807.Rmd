@@ -1,5 +1,5 @@
 ---
-title: "RPMI_PR_20200728"
+title: "YPD_PR_20200807"
 author: "Liz Hughes"
 date: "13/01/2022"
 output:
@@ -19,12 +19,12 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```
 
-#Plate reader assay#2.
+#Plate reader assay#4.
 
-##Test WT H99 and GAt 201 deletion mutants 003(Madhani) and 004(Bahn)in RPMI only.
+##Test WT H99 and Gat 201 deletion mutants 003(Madhani) and 004(Bahn)in YPD.
 ##7 Bioreps, 3 Techreps each. (NB only 2 Techreps for Biorep 7)
-##Grow 5ml culture from colony (1 colony = 1 Biorep)in YPD, 30C, 250 rpm ON.
-##Seed at )D 600nm = 0.2 , 200 ul per well.
+##Grow 5mlculture from colony (1 colony = 1 Biorep)in YPD, 30C, 250 rpm ON.
+##Seed at OD 600nm = 0.2 , 200 ul per well.
 ##Run for 3 days.
 ```{r load_packages}
 library("reshape2")
@@ -39,35 +39,31 @@ library(cowplot)
 
 # Read in transposed data as csv file
 
-```{r csv_file}
-rawdata <- read.csv("../PR_Data_Gat201/20200728_EH_PR2_RPMI_WT_Gat201TRSP.csv")
+```{r csv_file }
+rawdata <- read.csv("~/Edward Wallace/R/R files/Data/2020/20200807_EH_PR4_YPD_WTGat201_TRSP.csv")
 
 ```
 
-# Change time in seconds to time in hours
+# Change time in seconds to time in days
 
 ```{r mutate_time}
- rawdata_hrs<-mutate(rawdata, Time = Time/3600)
-
+ rawdata_hrs<-mutate(rawdata, Time = Time/86400)
 ```
 
 # Tidy the data using the melt function from reshape2
 
 ```{r reshape}
-reshaped <- melt(rawdata_hrs, id=c("Time", "Temp"), 
-                              variable.name="Well",
-                              value.name="OD595")
-
+reshaped <- melt(rawdata_hrs, id=c("Time", "Temp"), variable.name="Well",
+                 value.name="OD595")
 summary(reshaped)
 ```
+
 
 # Read in the Plate map data from csv file
 
 ```{r Load_platemap}
-
-platemap <- read.csv("../PR_Data_Gat201/20200728-PR2_SetupCSV.csv")
+platemap <- read.csv("~/Edward Wallace/R/R files/Data/2020/20200807-PR4_SetupCSV.csv")
 head(platemap, n=10)
-
 
 ```
 
@@ -75,27 +71,31 @@ head(platemap, n=10)
 
 ```{r join}
 annotated <- inner_join(reshaped, platemap, by="Well")
- 
+
 ```
+
 
 # How stable are ODs of blank wells, to use for normalisation?
 
 ```{r plot_blank_ODs}
 ggplot(data=filter(annotated,Strain==""), 
+      
        aes(x=Time, y=OD595, color=Strain, group = Well)) + 
        geom_line() + 
+ 
        facet_grid(Medium ~ .) +
-       labs(x="Time (hrs)", y="Absorbance at 595 nm")
+       labs(x="Number of Days", y="Absorbance at 595 nm")
 ```
-These are very stable, except H2. Remove from normalisation.
 
-## Calculate median OD for blank wells for each growth medium
-Remove well H2
+Remove A1
+
+## Calculate median OD for blank wells 
+
 ```{r calc_blank_medians}
 blank_OD_summary <- annotated %>%
   filter(Strain=="") %>%
-  filter(Well != "H2") %>%
-  # filter out columns 1 and 12 as well?
+ 
+
   group_by(Medium) %>%
   summarise(OD_median=median(OD595),
             OD_mean=mean(OD595),
@@ -104,7 +104,8 @@ blank_OD_summary <- annotated %>%
 print(blank_OD_summary)
 ```
 
-# Subtract blank OD to make corrected OD and Plot OD_corrected v Time (hrs)
+
+# Subtract blank OD to make corrected OD 
 
 ```{r subtract_blank_OD}
 normalisedOD <- annotated %>%
@@ -120,16 +121,15 @@ ggplot(data=normalisedOD %>%
                       filter(Strain != ""), 
                       aes(x=Time, y=OD_corrected, color=Strain, group = Well)) + 
        geom_line() + 
-       scale_y_continuous(limits=c(0,0.1),expand=c(0,0))+
-       geom_vline(aes(xintercept=15), linetype="dotted", colour="black") +
-  
-       labs(x = "Time(Hrs)",
+       facet_grid(Medium ~ .) +
+       scale_y_continuous(limits=c(0,1),expand=c(0,0))+
+       geom_hline(aes(yintercept=0.5), linetype="dotted", colour="black") +
+       labs(x = "Number of Days",
             y = "Absorbance (595nm)") +
-       theme(text = element_text(size = 20))+
-       theme_bw()+
-       scale_color_brewer(palette="Set1")
+      theme(text = element_text(size = 20))+
+      theme_bw()+
+      scale_color_brewer(palette="Set1")
 ```
-
 
 ## Plot OD all stat_summary(geom -"line")
 
@@ -139,10 +139,10 @@ ggplot(data=normalisedOD %>%
                       aes(x=Time, y=OD_corrected, color=Strain)) + 
        geom_line(aes(group = Well), size = 0.2, alpha = 0.2) + 
        stat_summary(fun = "median", geom = "line", size = 1) +
-       scale_y_continuous(limits=c(0,0.1),expand=c(0,0)) +
+       scale_y_continuous(limits=c(0,0.9),expand=c(0,0)) +
        labs(x = "Number of Days",
             y = "Absorbance (595nm)",
-            title = "Cell Culture Media") +
+            title = "Rich Culture Media") +
        theme_bw() +
        theme(text = element_text(size = 15))+
        theme(axis.title = element_text(size = 25)) +
@@ -151,10 +151,14 @@ ggplot(data=normalisedOD %>%
        scale_color_brewer(palette="Set1")
 ```
 
-
 ```{r}
-ggsave("~/GitHub/PR_Data_Gat201/RMPI_PR_Gat201.png",width = 7,height=5)
+ggsave("~/GitHub/PR_Data_Gat201/YPD_PR_Gat201.png",width = 7,height=5)
 ```
+
+
+
+
+
 
 
 
