@@ -47,7 +47,7 @@ rawdata <- read.csv("../PR_Data_Gat201/20200728_EH_PR2_RPMI_WT_Gat201TRSP.csv")
 # Change time in seconds to time in hours
 
 ```{r mutate_time}
- rawdata_hrs<-mutate(rawdata, Time = Time/3600)
+ rawdata_hrs<-mutate(rawdata, Time = Time/86400)
 
 ```
 
@@ -121,7 +121,7 @@ ggplot(data=normalisedOD %>%
                       aes(x=Time, y=OD_corrected, color=Strain, group = Well)) + 
        geom_line() + 
        scale_y_continuous(limits=c(0,0.1),expand=c(0,0))+
-       geom_vline(aes(xintercept=15), linetype="dotted", colour="black") +
+       
   
        labs(x = "Time(Hrs)",
             y = "Absorbance (595nm)") +
@@ -139,15 +139,18 @@ ggplot(data=normalisedOD %>%
                       aes(x=Time, y=OD_corrected, color=Strain)) + 
        geom_line(aes(group = Well), size = 0.2, alpha = 0.2) + 
        stat_summary(fun = "median", geom = "line", size = 1) +
-       scale_y_continuous(limits=c(0,0.1),expand=c(0,0)) +
+       scale_y_continuous(limits=c(0,0.1),expand=c(0,0), breaks = c(0, 0.05, 0.1)) +
+  
        labs(x = "Number of Days",
             y = "Absorbance (595nm)",
             title = "Cell Culture Media") +
        theme_bw() +
        theme(text = element_text(size = 15))+
        theme(axis.title = element_text(size = 25)) +
+  theme(axis.ticks.length = unit(0.3, "cm"))+
        theme(title = element_text(size = 30))+
-       theme(legend.title = element_text(size = 20))+
+       theme(legend.title = element_text(size = 25))+
+  theme(panel.grid.minor = element_blank())+
        scale_color_brewer(palette="Set1")
 ```
 

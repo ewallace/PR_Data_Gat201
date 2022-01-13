@@ -146,9 +146,10 @@ ggplot(data=normalisedOD %>%
             title = "Rich Culture Media") +
        theme_bw() +
        theme(text = element_text(size = 15))+
-       theme(axis.title = element_text(size = 25)) +
+       theme(axis.title = element_text(size = 25))+
+       theme(axis.ticks.length = unit(0.3, "cm"))+
        theme(title = element_text(size = 30))+
-       theme(legend.title = element_text(size = 20))+
+       theme(legend.title = element_text(size = 25))+
        scale_color_brewer(palette="Set1")
 ```
 
