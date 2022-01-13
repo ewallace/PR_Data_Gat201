@@ -1,0 +1,200 @@
+---
+title: "RPMI_PR_20200728"
+author: "Liz Hughes"
+date: "13/01/2022"
+output:
+  html_document:
+    toc: yes
+    toc_depth: 2
+  word_document:
+    toc: yes
+    toc_depth: '2'
+  pdf_document:
+    toc: yes
+    toc_depth: '2'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+#Plate reader assay#2.
+
+##Test WT H99 and GAt 201 deletion mutants 003(Madhani) and 004(Bahn)in RPMI only.
+##7 Bioreps, 3 Techreps each. (NB only 2 Techreps for Biorep 7)
+##Grow 5ml culture from colony (1 colony = 1 Biorep)in YPD, 30C, 250 rpm ON.
+##Seed at )D 600nm = 0.2 , 200 ul per well.
+##Run for 3 days.
+```{r load_packages}
+library("reshape2")
+library(dplyr)
+library(ggplot2)
+library(tidyverse)
+library(markdown)
+library(cowplot)
+```
+
+
+
+# Read in transposed data as csv file
+
+```{r csv_file}
+rawdata <- read.csv("../PR_Data_Gat201/20200728_EH_PR2_RPMI_WT_Gat201TRSP.csv")
+
+view(rawdata)
+```
+
+# Change time in seconds to time in hours
+
+```{r mutate_time}
+ rawdata_hrs<-mutate(rawdata, Time = Time/3600)
+
+```
+
+# Tidy the data using the melt function from reshape2
+
+```{r reshape}
+reshaped <- melt(rawdata_hrs, id=c("Time", "Temp"), 
+                              variable.name="Well",
+                              value.name="OD595")
+
+summary(reshaped)
+```
+
+# Read in the Plate map data from csv file
+
+```{r Load_platemap}
+
+platemap <- read.csv("../PR_Data_Gat201/20200728-PR2_SetupCSV.csv")
+head(platemap, n=10)
+
+
+```
+
+# Combine the reshaped data with the plate map, pairing them by Well
+
+```{r join}
+annotated <- inner_join(reshaped, platemap, by="Well")
+ 
+```
+
+# How stable are ODs of blank wells, to use for normalisation?
+
+```{r plot_blank_ODs}
+ggplot(data=filter(annotated,Strain==""), 
+       aes(x=Time, y=OD595, color=Strain, group = Well)) + 
+       geom_line() + 
+       facet_grid(Medium ~ .) +
+       labs(x="Time (hrs)", y="Absorbance at 595 nm")
+```
+These are very stable, except H2. Remove from normalisation.
+
+## Calculate median OD for blank wells for each growth medium
+Remove well H2
+```{r calc_blank_medians}
+blank_OD_summary <- annotated %>%
+  filter(Strain=="") %>%
+  filter(Well != "H2") %>%
+  # filter out columns 1 and 12 as well?
+  group_by(Medium) %>%
+  summarise(OD_median=median(OD595),
+            OD_mean=mean(OD595),
+            OD_max=max(OD595),
+            OD_min=min(OD595))
+print(blank_OD_summary)
+```
+
+# Subtract blank OD to make corrected OD and Plot OD_corrected v Time (hrs)
+
+```{r subtract_blank_OD}
+normalisedOD <- annotated %>%
+  left_join(blank_OD_summary, by="Medium") %>%
+  mutate(OD_corrected = OD595 - OD_median)
+
+```
+
+## Plot OD all 
+
+```{r plot_all}
+ggplot(data=normalisedOD %>%
+                      filter(Strain != ""), 
+                      aes(x=Time, y=OD_corrected, color=Strain, group = Well)) + 
+       geom_line() + 
+       scale_y_continuous(limits=c(0,0.1),expand=c(0,0))+
+       geom_vline(aes(xintercept=15), linetype="dotted", colour="black") +
+  
+       labs(x = "Time(Hrs)",
+            y = "Absorbance (595nm)") +
+       theme(text = element_text(size = 20))+
+       theme_bw()+
+       scale_color_brewer(palette="Set1")
+```
+
+
+## Plot OD all stat_summary(geom -"line")
+
+```{r plot_all_stat_summary}
+ggplot(data=normalisedOD %>%
+                      filter(Strain != ""), 
+                      aes(x=Time, y=OD_corrected, color=Strain, group = Well)) + 
+       geom_line() + 
+       stat_summary(fun = "median", geom = "line")+
+       scale_y_continuous(limits=c(0,0.1),expand=c(0,0))+
+       
+  
+       labs(x = "Time(Hrs)",
+            y = "Absorbance (595nm)") +
+       theme(text = element_text(size = 20))+
+       theme_bw()+
+       scale_color_brewer(palette="Set1")
+```
+
+
+
+# Calculate the median of the OD_corrected at each Time and for each Strain
+
+```{r calc_medians}
+OD_summary <- normalisedOD %>%
+  filter(Strain!="") %>%
+  group_by(Time,Strain) %>%
+  summarise(median_OD_corrected=median(OD_corrected))
+OD_summarydf <- as.data.frame(OD_summary)
+            
+```
+
+# Join ODSummary and normalisedOD by Time and Strain
+
+```{r join_ODSummary_normalisedOD}
+normalisedODSummary <- normalisedOD %>%
+ left_join(OD_summary, by="Time", "Strain") 
+
+```
+
+# Plot median_OD_corrected
+
+```{r plot_normalisedODSummary}
+  ggplot(data=normalisedODSummary %>%
+        filter(Strain.y != ""), 
+        aes(x=Time, y=median_OD_corrected, color=Strain.y, group = Well)) + 
+        geom_line() + 
+        scale_y_continuous(limits=c(0,0.1),expand=c(0,0))+
+        geom_vline(aes(xintercept=15), linetype="dotted", colour="black") +
+        labs(x = "Time(Hrs)",
+             y = "Absorbance (595nm)") +
+        theme(text = element_text(size = 20))+
+        theme_bw()+
+        scale_color_brewer(palette="Set1")
+```
+
+
+```{r plot_OD_summarydf }
+#  ggplot(data=OD_summarydf %>%
+#          aes(x=Time, y=median_OD_corrected, color=Strain)) + 
+ #         geom_line() + 
+  #        labs(x = "Time(Hrs)",
+   #            y = "Absorbance (595nm)") +
+    #      theme(text = element_text(size = 20))+
+     #     theme_bw()+
+      #    scale_color_brewer(palette="Set1")
+```
